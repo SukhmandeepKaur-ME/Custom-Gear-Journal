@@ -15,7 +15,7 @@ Once executed, the script generates a 3D gear model automatically, eliminating m
 
 # How to Use
 Open FreeCAD.
-Run the macro or script.
+Run the macro.
 Enter required parameters when prompted.
 View and manipulate your automatically generated 3D gear model.
 
