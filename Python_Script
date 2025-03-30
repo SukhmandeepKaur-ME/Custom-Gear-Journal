@@ -1,0 +1,63 @@
+import FreeCAD as App
+import FreeCADGui as Gui
+import Part, math
+from PySide2.QtWidgets import QInputDialog
+
+# Create a new FreeCAD document
+doc = App.newDocument("ParametricGear")
+App.setActiveDocument("ParametricGear")
+Gui.ActiveDocument = Gui.getDocument("ParametricGear")
+
+# GUI Input for Parametric Design (No Restrictive Limits)
+module, ok = QInputDialog.getDouble(None, "Gear Module", "Enter gear module:", 2.0, 0.1, 1000, 2)
+if not ok or module <= 0: exit()
+
+teeth, ok = QInputDialog.getInt(None, "Teeth Count", "Enter number of teeth:", 20, 3, 1000, 1)
+if not ok or teeth < 3: exit()
+
+thickness, ok = QInputDialog.getDouble(None, "Gear Thickness", "Enter thickness:", 10.0, 0.1, 500, 2)
+if not ok or thickness <= 0: exit()
+
+bore_diameter, ok = QInputDialog.getDouble(None, "Bore Diameter", "Enter bore diameter:", 5.0, 0.1, 1000, 2)
+if not ok or bore_diameter <= 0: exit()
+
+# Calculations
+pitch_diameter = module * teeth
+outer_diameter = pitch_diameter + (2 * module)
+tooth_depth = 2.25 * module
+tooth_width = math.pi * module / 2
+
+# Create base gear shape
+gear = Part.makeCylinder(outer_diameter / 2, thickness)
+
+# Create gear teeth
+teeth_objects = []
+for i in range(teeth):
+    angle = (360 / teeth) * i
+    tooth = Part.makeBox(tooth_width, tooth_depth, thickness)
+    tooth.translate(App.Vector(pitch_diameter / 2, -tooth_depth / 2, 0))
+    tooth.rotate(App.Vector(0, 0, 0), App.Vector(0, 0, 1), angle)
+    teeth_objects.append(tooth)
+
+# Fix: Properly fuse all teeth into a single shape
+teeth_shape = teeth_objects[0]
+for tooth in teeth_objects[1:]:
+    teeth_shape = teeth_shape.fuse(tooth)
+
+# Fix: Merge teeth with base gear correctly
+gear = gear.fuse(teeth_shape)
+
+# Fix: Ensure bore hole is correctly cut
+hole = Part.makeCylinder(bore_diameter / 2, thickness)
+gear = gear.cut(hole)
+
+# Fix: Add the gear to the FreeCAD document
+gear_object = doc.addObject("Part::Feature", "ParametricGear")
+gear_object.Shape = gear
+gear_object.Visibility = True
+
+# Recompute & fit view
+doc.recompute()
+Gui.SendMsgToActiveView("ViewFit")
+
+print("Parametric Gear created successfully!")
